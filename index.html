@@ -198,6 +198,145 @@ canvas{
  box-shadow:0 4px 20px rgba(0,0,0,.5);
 }
 #musicTip.show{display:block}
+
+/* Mensaje de pocos días */
+#fewDaysAlert{
+ display:none;
+ margin-top:20px;
+ padding:16px;
+ background:rgba(212,175,55,.15);
+ border:2px solid #d4af37;
+ border-radius:16px;
+ font-weight:700;
+ color:#d4af37;
+ font-size:18px;
+ animation:pulse 2s infinite;
+}
+
+#fewDaysAlert.show{
+ display:block;
+}
+
+@keyframes pulse{
+ 0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(212,175,55,.4)}
+ 50%{transform:scale(1.02);box-shadow:0 0 20px 5px rgba(212,175,55,.6)}
+}
+
+/* Animación de vibración */
+body.vibrating{
+ animation:vibrate 0.3s ease-in-out infinite;
+}
+
+@keyframes vibrate{
+ 0%,100%{transform:translateX(0)}
+ 25%{transform:translateX(-2px) rotate(-0.5deg)}
+ 75%{transform:translateX(2px) rotate(0.5deg)}
+}
+
+/* Carrusel de fotos */
+#photoCarousel{
+ position:relative;
+ max-width:100%;
+ margin:30px auto 0;
+ overflow:hidden;
+ border-radius:16px;
+}
+
+#carouselContainer{
+ display:flex;
+ transition:transform 0.5s ease;
+}
+
+.carousel-item{
+ min-width:100%;
+ position:relative;
+}
+
+.carousel-item img{
+ width:100%;
+ height:460px;
+ object-fit:cover;
+ display:block;
+ border-radius:16px;
+ border:2px solid rgba(212,175,55,.3);
+}
+
+.carousel-nav{
+ position:absolute;
+ top:50%;
+ transform:translateY(-50%);
+ background:rgba(212,175,55,.8);
+ border:none;
+ width:40px;
+ height:40px;
+ border-radius:50%;
+ color:#000;
+ font-size:20px;
+ cursor:pointer;
+ z-index:10;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ transition:all 0.3s;
+}
+
+.carousel-nav:hover{
+ background:rgba(212,175,55,1);
+ transform:translateY(-50%) scale(1.1);
+}
+
+.carousel-nav.prev{
+ left:10px;
+}
+
+.carousel-nav.next{
+ right:10px;
+}
+
+.carousel-dots{
+ display:flex;
+ justify-content:center;
+ gap:8px;
+ margin-top:20px;
+}
+
+.carousel-dot{
+ width:10px;
+ height:10px;
+ border-radius:50%;
+ background:rgba(212,175,55,.4);
+ border:none;
+ cursor:pointer;
+ transition:all 0.3s;
+}
+
+.carousel-dot.active{
+ background:#d4af37;
+ transform:scale(1.2);
+}
+
+/* Frase principal con corazón */
+.carousel-quote{
+ font-family:'Lobster',cursive;
+ font-size:22px;
+ color:#d4af37;
+ text-shadow:0 0 8px #f5e7b2,0 0 25px #d4af37;
+ margin:25px 0 20px;
+ line-height:1.5;
+}
+
+.heart-gold{
+ color:#d4af37;
+ font-size:28px;
+ display:inline-block;
+ animation:heartbeat 1.5s ease-in-out infinite;
+ text-shadow:0 0 12px #d4af37;
+}
+
+@keyframes heartbeat{
+ 0%,100%{transform:scale(1)}
+ 50%{transform:scale(1.15)}
+}
 </style>
 </head>
 
@@ -229,12 +368,42 @@ canvas{
   <div class="time"><span id="m">0</span>Min</div>
   <div class="time"><span id="s">0</span>Seg</div>
  </div>
+ <div id="fewDaysAlert">⚡ ¡Faltan pocos días! ⚡</div>
 </section>
 
 <section>
  <h2>📅 Fecha</h2>
  <p>19 de Junio de 2026</p>
  <p>21:00 hs</p>
+</section>
+
+<section>
+ <p class="carousel-quote">El tiempo paso y cada etapa fue formando quien soy hoy <span class="heart-gold">💛</span></p>
+ 
+ <div id="photoCarousel">
+  <button class="carousel-nav prev" onclick="moveCarousel(-1)">‹</button>
+  <button class="carousel-nav next" onclick="moveCarousel(1)">›</button>
+  
+  <div id="carouselContainer">
+   <div class="carousel-item">
+    <img src="/Fotos/Foto1.jpeg" alt="Recuerdo especial">
+   </div>
+   <div class="carousel-item">
+    <img src="/Fotos/Foto2.jpeg" alt="Recuerdo especial">
+   </div>
+   <div class="carousel-item">
+    <img src="/Fotos/Foto3.jpeg" alt="Recuerdo especial">
+   </div>
+   <div class="carousel-item">
+    <img src="/Fotos/Foto4.jpeg" alt="Recuerdo especial">
+   </div>
+   <div class="carousel-item">
+    <img src="/Fotos/Foto5.jpeg" alt="Recuerdo especial">
+   </div>
+  </div>
+  
+  <div class="carousel-dots" id="carouselDots"></div>
+ </div>
 </section>
 
 <section>
@@ -295,6 +464,7 @@ canvas{
 
 <section>
  <h2>🎁 Regalo</h2>
+ <p>Si no sabes que regalarme te dejo mi alias</p>
  <p>Alias Mercado Pago</p>
  <p style="font-weight:700;font-size:18px">miavasquez.mp</p>
 </section>
@@ -380,16 +550,98 @@ const observer=new IntersectionObserver(e=>{
 },{threshold:.2});
 document.querySelectorAll("section").forEach(s=>observer.observe(s));
 
+// CARRUSEL DE FOTOS
+let currentSlide=0;
+const carouselContainer=document.getElementById("carouselContainer");
+const carouselItems=document.querySelectorAll(".carousel-item");
+const carouselDots=document.getElementById("carouselDots");
+
+// Crear dots
+carouselItems.forEach((_,i)=>{
+ const dot=document.createElement("button");
+ dot.className="carousel-dot"+(i===0?" active":"");
+ dot.onclick=()=>goToSlide(i);
+ carouselDots.appendChild(dot);
+});
+
+function updateCarousel(){
+ carouselContainer.style.transform=`translateX(-${currentSlide*100}%)`;
+ document.querySelectorAll(".carousel-dot").forEach((dot,i)=>{
+  dot.classList.toggle("active",i===currentSlide);
+ });
+}
+
+function moveCarousel(direction){
+ currentSlide+=direction;
+ if(currentSlide<0) currentSlide=carouselItems.length-1;
+ if(currentSlide>=carouselItems.length) currentSlide=0;
+ updateCarousel();
+}
+
+function goToSlide(index){
+ currentSlide=index;
+ updateCarousel();
+}
+
+// Auto-play del carrusel (cambia cada 4 segundos)
+setInterval(()=>{
+ moveCarousel(1);
+},4000);
+
+// Touch/swipe support
+let touchStartX=0;
+let touchEndX=0;
+
+carouselContainer.addEventListener("touchstart",e=>{
+ touchStartX=e.changedTouches[0].screenX;
+},{passive:true});
+
+carouselContainer.addEventListener("touchend",e=>{
+ touchEndX=e.changedTouches[0].screenX;
+ handleSwipe();
+},{passive:true});
+
+function handleSwipe(){
+ const swipeThreshold=50;
+ const diff=touchStartX-touchEndX;
+ if(Math.abs(diff)>swipeThreshold){
+  if(diff>0) moveCarousel(1);
+  else moveCarousel(-1);
+ }
+}
+
 // COUNTDOWN
 const eventDate=new Date("2026-06-19T21:00:00").getTime();
+const fewDaysAlert=document.getElementById("fewDaysAlert");
+let hasVibrated=false;
+
 setInterval(()=>{
  const t=eventDate-Date.now();
  if(t>0){
-  d.textContent=Math.floor(t/86400000);
+  const daysLeft=Math.floor(t/86400000);
+  d.textContent=daysLeft;
   h.textContent=Math.floor(t/3600000)%24;
   m.textContent=Math.floor(t/60000)%60;
   s.textContent=Math.floor(t/1000)%60;
+  
+  // Cuando falten 5 días o menos
+  if(daysLeft<=5){
+   fewDaysAlert.classList.add("show");
+   document.body.classList.add("vibrating");
+   
+   // Vibración del dispositivo (solo una vez al detectar que faltan 5 días)
+   if(!hasVibrated && navigator.vibrate){
+    navigator.vibrate([200,100,200,100,200]);
+    hasVibrated=true;
+   }
+  }else{
+   fewDaysAlert.classList.remove("show");
+   document.body.classList.remove("vibrating");
+   hasVibrated=false;
+  }
  }else{
+  fewDaysAlert.classList.remove("show");
+  document.body.classList.remove("vibrating");
   galleryText.textContent="¡Las fotos ya están disponibles! 📸✨";
   gallery.style.display="flex";
  }
